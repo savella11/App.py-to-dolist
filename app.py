@@ -5,10 +5,9 @@ from datetime import datetime
 # --- Configuración de Flask y Base de Datos ---
 app = Flask(__name__)
 # Configura una base de datos SQLite en el archivo 'todo.db'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:qnrHMSbEhHpzOWYHyWsEcgdOkckSkSyT@HOST:PORT/railway'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:qnrHMSbEhHpzOWYHyWsEcgdOkckSkSyT@postgres.railway.internal:5432/railway'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
-
 
 # --- Rutas de la Aplicación ---
 
@@ -65,3 +64,4 @@ if __name__ == '__main__':
         db.create_all()
 
     app.run(debug=True)
+
