@@ -1,67 +1,58 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime
+from models import db, Todo
+import os
 
-# --- Configuración de Flask y Base de Datos ---
 app = Flask(__name__)
-# Configura una base de datos SQLite en el archivo 'todo.db'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:qnrHMSbEhHpzOWYHyWsEcgdOkckSkSyT@postgres.railway.internal:5432/railway'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db = SQLAlchemy(app)
 
-# --- Rutas de la Aplicación ---
+app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL")
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-# Ruta para mostrar y agregar tareas
-@app.route('/', methods=['POST', 'GET'])
-def index():
-    if request.method == 'POST':
-        # Obtiene el contenido de la tarea del formulario
-        task_content = request.form['content']
-        new_task = Todo(content=task_content)
+db.init_app(app)
 
-        try:
-            # Agrega la tarea a la base de datos y guarda
-            db.session.add(new_task)
-            db.session.commit()
-            return redirect('/')
-        except:
-            return 'Hubo un problema al añadir tu tarea.'
-    else:
-        # Muestra todas las tareas, ordenadas por fecha de creación
-        tasks = Todo.query.order_by(Todo.date_created).all()
-        # Pasa las tareas al template HTML para que las muestre
-        return render_template('index.html', tasks=tasks)
+with app.app_context():
+    db.create_all()
 
-# Ruta para eliminar tareas
-@app.route('/delete/<int:id>')
-def delete(id):
-    task_to_delete = Todo.query.get_or_404(id)
+# Obtener todas las tareas
+@app.route("/tasks", methods=["GET"])
+def get_tasks():
+    tasks = Todo.query.order_by(Todo.date_created).all()
+    return jsonify([t.to_dict() for t in tasks])
 
-    try:
-        db.session.delete(task_to_delete)
-        db.session.commit()
-        return redirect('/')
-    except:
-        return 'Hubo un problema al eliminar esa tarea.'
-        
-# Ruta para marcar/desmarcar tareas (Toggle completion)
-@app.route('/complete/<int:id>')
-def complete(id):
-    task_to_complete = Todo.query.get_or_404(id)
-    # Cambia el estado: si es 0 (pendiente), lo pone a 1 (completado), y viceversa
-    task_to_complete.completed = 1 if task_to_complete.completed == 0 else 0
+# Crear nueva tarea
+@app.route("/tasks", methods=["POST"])
+def create_task():
+    data = request.get_json()
+    content = data.get("content")
 
-    try:
-        db.session.commit()
-        return redirect('/')
-    except:
-        return 'Hubo un problema al actualizar la tarea.'
+    if not content:
+        return jsonify({"error": "content required"}), 400
 
+    task = Todo(content=content)
+    db.session.add(task)
+    db.session.commit()
+    return jsonify(task.to_dict()), 201
 
-if __name__ == '__main__':
-    # Crea la base de datos si no existe
-    with app.app_context():
-        db.create_all()
+# Completar tarea
+@app.route("/tasks/<int:id>/complete", methods=["PUT"])
+def complete_task(id):
+    task = Todo.query.get_or_404(id)
+    task.completed = not task.completed
+    db.session.commit()
+    return jsonify(task.to_dict())
 
-    app.run(debug=True)
+# Eliminar tarea
+@app.route("/tasks/<int:id>", methods=["DELETE"])
+def delete_task(id):
+    task = Todo.query.get_or_404(id)
+    db.session.delete(task)
+    db.session.commit()
+    return jsonify({"message": "deleted"}), 200
+
+@app.route("/")
+def home():
+    return jsonify({"status": "API RUNNING"}), 200
+
+if __name__ == "__main__":
+    app.run()
 
