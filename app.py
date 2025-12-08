@@ -1,71 +1,63 @@
-from flask import Flask, request, jsonify
-from models import db, Todo
+from flask import Flask, jsonify, request
+from flask_sqlalchemy import SQLAlchemy
+from flask_cors import CORS
 import os
 
 app = Flask(__name__)
+CORS(app, resources={r"/*": {"origins": "*"}})
 
-# === Configuración de la base de datos ===
-uri = os.getenv("DATABASE_URL")
-
-# Validación por si no está configurada en Render
-if not uri:
-    raise Exception("DATABASE_URL environment variable not set")
-
-app.config["SQLALCHEMY_DATABASE_URI"] = uri
+# Configuración de la base de datos
+app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-db.init_app(app)
+db = SQLAlchemy(app)
 
+# Modelo Task
+class Task(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    content = db.Column(db.String(200), nullable=False)
+    completed = db.Column(db.Boolean, default=False)
 
-# === Rutas de prueba ===
+# Ruta de prueba
 @app.route("/")
-def home():
-    return jsonify({"status": "API RUNNING"}), 200
+def index():
+    return {"status": "API RUNNING"}
 
-
-# === GET: obtener todas las tareas ===
+# Obtener tareas
 @app.route("/tasks", methods=["GET"])
 def get_tasks():
-    tasks = Todo.query.order_by(Todo.date_created).all()
-    return jsonify([t.to_dict() for t in tasks])
+    tasks = Task.query.all()
+    return jsonify([
+        {"id": t.id, "content": t.content, "completed": t.completed}
+        for t in tasks
+    ])
 
-
-# === POST: crear tarea ===
+# Crear tarea
 @app.route("/tasks", methods=["POST"])
-def create_task():
+def add_task():
     data = request.get_json()
-    content = data.get("content")
-
-    if not content:
-        return jsonify({"error": "content required"}), 400
-
-    task = Todo(content=content)
-    db.session.add(task)
+    new_task = Task(content=data["content"])
+    db.session.add(new_task)
     db.session.commit()
-    return jsonify(task.to_dict()), 201
+    return jsonify({"message": "Task created"}), 201
 
-
-# === PUT: marcar como completada ===
+# Completar tarea
 @app.route("/tasks/<int:id>/complete", methods=["PUT"])
 def complete_task(id):
-    task = Todo.query.get_or_404(id)
-    task.completed = not task.completed
+    t = Task.query.get_or_404(id)
+    t.completed = True
     db.session.commit()
-    return jsonify(task.to_dict())
+    return jsonify({"message": "Task completed"})
 
-
-# === DELETE: eliminar tarea ===
+# Eliminar tarea
 @app.route("/tasks/<int:id>", methods=["DELETE"])
 def delete_task(id):
-    task = Todo.query.get_or_404(id)
-    db.session.delete(task)
+    t = Task.query.get_or_404(id)
+    db.session.delete(t)
     db.session.commit()
-    return jsonify({"message": "deleted"}), 200
+    return jsonify({"message": "Task deleted"})
 
-
+# Ejecutar en Render
 if __name__ == "__main__":
-    app.run()
-
-from flask_cors import CORS
-CORS(app)
+    app.run(host="0.0.0.0", port=10000)
 
