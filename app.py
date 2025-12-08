@@ -5,7 +5,7 @@ from datetime import datetime
 # --- Configuración de Flask y Base de Datos ---
 app = Flask(__name__)
 # Configura una base de datos SQLite en el archivo 'todo.db'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://USER:PASSWORD@HOST:PORT/railway'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:qnrHMSbEhHpzOWYHyWsEcgdOkckSkSyT@HOST:PORT/railway'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
@@ -63,4 +63,5 @@ if __name__ == '__main__':
     # Crea la base de datos si no existe
     with app.app_context():
         db.create_all()
+
     app.run(debug=True)
