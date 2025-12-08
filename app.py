@@ -10,16 +10,15 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db.init_app(app)
 
-with app.app_context():
-    db.create_all()
+# ❌ Eliminar esto:
+# with app.app_context():
+#     db.create_all()
 
-# Obtener todas las tareas
 @app.route("/tasks", methods=["GET"])
 def get_tasks():
     tasks = Todo.query.order_by(Todo.date_created).all()
     return jsonify([t.to_dict() for t in tasks])
 
-# Crear nueva tarea
 @app.route("/tasks", methods=["POST"])
 def create_task():
     data = request.get_json()
@@ -33,7 +32,6 @@ def create_task():
     db.session.commit()
     return jsonify(task.to_dict()), 201
 
-# Completar tarea
 @app.route("/tasks/<int:id>/complete", methods=["PUT"])
 def complete_task(id):
     task = Todo.query.get_or_404(id)
@@ -41,7 +39,6 @@ def complete_task(id):
     db.session.commit()
     return jsonify(task.to_dict())
 
-# Eliminar tarea
 @app.route("/tasks/<int:id>", methods=["DELETE"])
 def delete_task(id):
     task = Todo.query.get_or_404(id)
