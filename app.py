@@ -27,7 +27,7 @@ db = SQLAlchemy(app)
 class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.String(200), nullable=False)
-    completed = db.Column(db.Boolean, default=False)
+    completed = db.Column(db.Boolean, default=0)
 
 
 # ===============================
@@ -73,3 +73,4 @@ def delete_task(id):
 # ===============================
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
+
