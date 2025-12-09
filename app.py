@@ -47,11 +47,27 @@ def get_tasks():
 
 @app.route("/tasks", methods=["POST"])
 def add_task():
-    data = request.get_json()
-    new_task = Task(content=data["content"])
-    db.session.add(new_task)
-    db.session.commit()
-    return jsonify({"message": "Task created"}), 201
+    try:
+        data = request.get_json()
+        
+        # 1. Validación: Verificar que 'content' exista y no esté vacío
+        content = data.get("content")
+        
+        # Si la clave 'content' no existe en el JSON o si su valor está vacío,
+        # devolvemos un error 400 (Bad Request)
+        if not content or content.strip() == "":
+            return jsonify({"error": "Content field is required"}), 400
+            
+        # 2. Creación y Commit (esto ya no fallará por NOT NULL)
+        new_task = Task(content=content)
+        db.session.add(new_task)
+        db.session.commit()
+        return jsonify({"message": "Task created", "id": new_task.id}), 201
+        
+    except Exception as e:
+        # Esto captura errores de JSON malformado o de servidor
+        print(f"Error during add_task: {e}")
+        return jsonify({"error": "An internal server error occurred"}), 500
 
 @app.route("/tasks/<int:id>/complete", methods=["PUT"])
 def complete_task(id):
@@ -73,4 +89,5 @@ def delete_task(id):
 # ===============================
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
+
 
